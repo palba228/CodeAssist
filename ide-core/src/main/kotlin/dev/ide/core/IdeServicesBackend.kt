@@ -760,3 +760,10 @@ class IdeServicesBackend(
         CompletionItemKind.SNIPPET -> UiCompletionKind.Snippet
     }
 }
+override fun deletePath(path: String): Boolean {
+        return try {
+            java.io.File(path).deleteRecursively()
+        } catch (e: Exception) {
+            false
+        }
+}
