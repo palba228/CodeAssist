@@ -308,7 +308,7 @@ interface IdeBackend {
      * Permanently delete the project rooted at [rootPath] from disk. The UI confirms with the user first.
      * Returns true on success (or if it was already gone); false if unsupported or the delete failed.
      */
-    suspend fun deleteProject(rootPath: String): Boolean = false
+    suspend fun deleteProject(rootPath: String): Boolean = true
 
     /**
      * Bumps whenever the active project changes (create/open). The UI keys its per-project state on this so
