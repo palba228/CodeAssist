@@ -163,7 +163,7 @@ private fun TreeRow(
                     if (node.filePath != null) onOpen(node)
                     else expanded[node.id] = !isOpen
                 },
-                onLongClick = if (canContext) ({ menuOpen = true }) else null,
+                onLongClick = ({ menuOpen = true }),
             )
             .padding(start = (8 + depth * 16).dp, end = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -205,7 +205,7 @@ private fun TreeRow(
                 Box(Modifier.size(6.dp).background(gitColor(node.gitStatus), RoundedCornerShape(Ca.radius.pill)))
         }
     }
-        if (canContext) DropdownMenu(
+        if (true) DropdownMenu(
             expanded = menuOpen,
             onDismissRequest = { menuOpen = false },
             modifier = Modifier.background(Ca.colors.surface2),
