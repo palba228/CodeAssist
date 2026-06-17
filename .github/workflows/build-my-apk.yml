@@ -1,1 +1,27 @@
+name: Build My APK
 
+on: 
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up correct Java version
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          
+      - name: Build APK without checks
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug -x lint -x test
+          
+      - name: Upload Final APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: CodeAssist-Unlocked
+          path: '**/build/outputs/apk/**/*.apk'
