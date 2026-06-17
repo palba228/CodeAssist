@@ -62,6 +62,8 @@ jobs:
       # (machine-independent); the full-build wall time is gated only by a wide trend + catastrophe ceiling.
       - name: Build engine — large multi-module build & incremental scaling
         run: ./gradlew :build-engine:regressionTest --console=plain --stacktrace
+      - name: Build Android APK
+        run: ./gradlew assembleDebug
 
       # Latency / memory / per-query benchmarks are intentionally NOT gated in CI: they measure wall-clock
       # time and retained heap, which are machine-dependent (a shared CI runner is far slower than the
