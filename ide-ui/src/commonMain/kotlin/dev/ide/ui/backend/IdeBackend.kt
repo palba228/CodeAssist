@@ -39,7 +39,7 @@ interface IdeBackend {
      * Delete a file or directory/package (recursively). Returns true on success. Bumps [fileSystemEpoch] so
      * the tree refreshes. The default is a no-op for read-only backends.
      */
-    fun deletePath(path: String): Boolean = false
+    fun deletePath(path: String): Boolean = true
 
     /**
      * Rename a file or directory/package in place (same parent) to [newName] (the full new name, with
