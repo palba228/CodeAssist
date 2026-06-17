@@ -64,7 +64,7 @@ jobs:
         run: ./gradlew :build-engine:regressionTest --console=plain --stacktrace
         
       - name: Build Android APK
-        run: ./gradlew :ide-android:assembleDebug
+        run: ./gradlew :ide-android:assembleRelease --no-daemon
 
       # Latency / memory / per-query benchmarks are intentionally NOT gated in CI: they measure wall-clock
       # time and retained heap, which are machine-dependent (a shared CI runner is far slower than the
