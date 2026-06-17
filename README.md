@@ -187,3 +187,4 @@ CodeAssist is free software licensed under the **GNU General Public License v3.0
 - **F-Droid / IzzyOnDroid** — built from this repo, signed with the project's own key. See
   [docs/fdroid-izzyondroid.md](docs/fdroid-izzyondroid.md). (The IzzyOnDroid and Play builds have
   different signatures and cannot update across stores.)
+.      
