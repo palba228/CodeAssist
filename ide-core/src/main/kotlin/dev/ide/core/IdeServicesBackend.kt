@@ -15,7 +15,7 @@ import dev.ide.block.SlotCategory
 import dev.ide.block.SlotRef
 import dev.ide.block.Wrap
 import dev.ide.lang.completion.CaretAction
-import dev.ide.lang.completion.CompletionItemKind
+import dev.ide.completion.CompletionItemKind
 import dev.ide.lang.hints.InlayHintKind
 import dev.ide.ui.backend.UiColorEntry
 import dev.ide.ui.backend.UiDrawable
@@ -268,10 +268,16 @@ class IdeServicesBackend(
 
     override fun deletePath(path: String): Boolean {
         return try {
-            val file = File(path)
-            val ok = file.deleteRecursively()
-            if (ok) _fsEpoch.value += 1
-            ok
+            val rootPath = Paths.get(path)
+            if (Files.exists(rootPath)) {
+                Files.walk(rootPath)
+                    .sorted(Comparator.reverseOrder())
+                    .forEach { Files.deleteIfExists(it) }
+                _fsEpoch.value += 1
+                true
+            } else {
+                false
+            }
         } catch (e: Exception) {
             false
         }
