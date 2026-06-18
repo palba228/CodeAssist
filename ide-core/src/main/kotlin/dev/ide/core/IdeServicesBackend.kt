@@ -269,15 +269,18 @@ class IdeServicesBackend(
     override fun deletePath(path: String): Boolean {
         return try {
             val rootPath = Paths.get(path)
-            if (Files.exists(rootPath)) {
+            var ok = services.deletePath(rootPath)
+            if (!ok && Files.exists(rootPath)) {
                 Files.walk(rootPath)
                     .sorted(Comparator.reverseOrder())
                     .forEach { Files.deleteIfExists(it) }
-                _fsEpoch.value += 1
-                true
-            } else {
-                false
+                ok = true
             }
+            if (ok) {
+                _fsEpoch.value += 1
+                _projectEpoch.value += 1 
+            }
+            ok
         } catch (e: Exception) {
             false
         }
