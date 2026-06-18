@@ -15,7 +15,7 @@ import dev.ide.block.SlotCategory
 import dev.ide.block.SlotRef
 import dev.ide.block.Wrap
 import dev.ide.lang.completion.CaretAction
-import dev.ide.completion.CompletionItemKind
+import dev.ide.lang.completion.CompletionItemKind
 import dev.ide.lang.hints.InlayHintKind
 import dev.ide.ui.backend.UiColorEntry
 import dev.ide.ui.backend.UiDrawable
