@@ -280,6 +280,11 @@ private fun CompactLayout(
                 onImport = { doImport(state, fileActions) },
                 canShare = fileActions.canShare,
                 onShare = { node -> node.filePath?.let { fileActions.share(it) } },
+                canModify = true,
+                onRename = { onFileOp(it, FileOpKind.Rename) },
+                onMove = { onFileOp(it, FileOpKind.Move) },
+                onCopy = { onFileOp(it, FileOpKind.Copy) },
+                onDelete = { onFileOp(it, FileOpKind.Delete) }
             )
         }
         // Build console as a bottom sheet; a taller detent when a problem is present (design: 0.6 / 0.72).
