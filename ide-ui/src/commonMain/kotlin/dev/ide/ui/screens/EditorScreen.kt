@@ -144,12 +144,12 @@ fun EditorScreen(
         FileOperationDialog(
             request = fileOp,
             tree = state.tree,
-            onRename = { node, newName -> node.fileOpPath()?.let { p -> scope.launch { state.renamePath(p, newName) } } },
-            onMove = { node, dest -> node.fileOpPath()?.let { state.movePath(it, dest) } },
-            onCopy = { node, dest -> node.fileOpPath()?.let { state.copyPath(it, dest) } },
-            onDelete = { node -> node.fileOpPath()?.let { state.deletePath(it) } },
+            onRename = { node, newName -> node.fileOpPath()?.let { p -> scope.launch { state.renamePath(p, newName); state.refreshTree(); fileOp = null } } },
+            onMove = { node, dest -> node.fileOpPath()?.let { state.movePath(it, dest); state.refreshTree(); fileOp = null } },
+            onCopy = { node, dest -> node.fileOpPath()?.let { state.copyPath(it, dest); state.refreshTree(); fileOp = null } },
+            onDelete = { node -> node.fileOpPath()?.let { state.deletePath(it); state.refreshTree(); fileOp = null } },
             onDismiss = { fileOp = null },
-        )
+        )        
     }
 }
 
