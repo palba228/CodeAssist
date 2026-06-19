@@ -41,6 +41,8 @@ import dev.ide.ui.icons.TreeIcon
 import dev.ide.ui.icons.TreeIcons
 import dev.ide.ui.icons.resolveTint
 import dev.ide.ui.theme.Ca
+import androidx.compose.runtime.*
+import dev.ide.ui.components.AiAgentDialog
 
 /**
  * File navigator content: header + a module → source folder → package → file tree (caret toggles).
@@ -78,6 +80,14 @@ fun FileNavigator(
         mutableSetExpandedDefaults(root)
     }
     val ctx = FileRowActions(canModify, onRename, onMove, onCopy, onDelete)
+
+    // --- ДОБАВЛЕНО ДЛЯ ИИ ---
+    var showAiSettings by remember { mutableStateOf(false) }
+    var currentProvider by remember { mutableStateOf("") }
+    var currentApiKey by remember { mutableStateOf("") }
+    var currentApiUrl by remember { mutableStateOf("") }
+    // ------------------------
+
     Column(modifier) {
         // header
         Row(
@@ -93,17 +103,36 @@ fun FileNavigator(
             // Import is always visible (touch-friendly — the per-row `+` is hover-gated, desktop-only).
             if (canImport) IconButtonCa(CaIcons.download, "Import files", onClick = onImport, boxSize = 30, iconSize = 18)
             IconButtonCa(CaIcons.plus, "New class", onClick = onNewFileRoot, boxSize = 30, iconSize = 18)
+            
+            // --- ДОБАВЛЕНО: Кнопка вызова настроек ИИ ---
+            IconButtonCa(CaIcons.gear, "AI Settings", onClick = { showAiSettings = true }, boxSize = 30, iconSize = 18)
+            // --------------------------------------------
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(Ca.colors.separator))
         Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(vertical = 6.dp)) {
             root.children.forEach { TreeRow(it, 0, expanded, activePath, onOpen, onNewFile, onViewDependencies, onConfigureModule, canShare, onShare, ctx) }
-            IconButton(Ca.icons.sparkles, "AI Agent", onClick = onAiAgentClick, boxSize = 30, iconSize = 18)
         }
+
+        // --- ДОБАВЛЕНО: Сам диалог ИИ ---
+        if (showAiSettings) {
+            AiAgentDialog(
+                onDismiss = { showAiSettings = false },
+                onSaveSettings = { provider, apiKey, url ->
+                    currentProvider = provider
+                    currentApiKey = apiKey
+                    currentApiUrl = url
+                    showAiSettings = false
+                    // Вывод в консоль для проверки работы
+                    println("Сохранено: Провайдер=$provider, URL=$url, Ключ=$apiKey")
+                }
+            )
+        }
+        // --------------------------------
     }
 }
 
 /** The delete/rename/move/copy callbacks the per-row context menu invokes (bundled to avoid threading five
- *  parameters through the recursive [TreeRow]). [enabled] gates whether the menu is offered at all. */
+ * parameters through the recursive [TreeRow]). [enabled] gates whether the menu is offered at all. */
 private class FileRowActions(
     val enabled: Boolean,
     val onRename: (TreeNode) -> Unit,
@@ -111,7 +140,6 @@ private class FileRowActions(
     val onCopy: (TreeNode) -> Unit,
     val onDelete: (TreeNode) -> Unit,
 )
-
 
 private fun mutableSetExpandedDefaults(root: TreeNode): androidx.compose.runtime.snapshots.SnapshotStateMap<String, Boolean> {
     val map = androidx.compose.runtime.mutableStateMapOf<String, Boolean>()
