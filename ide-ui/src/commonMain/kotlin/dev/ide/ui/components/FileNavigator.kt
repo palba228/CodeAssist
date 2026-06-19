@@ -45,6 +45,16 @@ import androidx.compose.runtime.*
 import dev.ide.ui.components.AiAgentDialog
 
 /**
+ * Глобальное хранилище настроек ИИ.
+ * Позволяет получить сохраненные данные из любой точки приложения (например, из модуля редактора).
+ */
+object AiSettings {
+    var provider by mutableStateOf("Gemini")
+    var apiKey by mutableStateOf("")
+    var apiUrl by mutableStateOf("")
+}
+
+/**
  * File navigator content: header + a module → source folder → package → file tree (caret toggles).
  * Surface-agnostic — it draws no background of its own so it reads correctly either as a persistent
  * pane (wrapped in a regular-glass [GlassSurface]) or as the content of a glass-thick [BottomSheet]
@@ -81,12 +91,8 @@ fun FileNavigator(
     }
     val ctx = FileRowActions(canModify, onRename, onMove, onCopy, onDelete)
 
-    // --- ДОБАВЛЕНО ДЛЯ ИИ ---
+    // Состояние отображения диалогового окна настроек ИИ
     var showAiSettings by remember { mutableStateOf(false) }
-    var currentProvider by remember { mutableStateOf("") }
-    var currentApiKey by remember { mutableStateOf("") }
-    var currentApiUrl by remember { mutableStateOf("") }
-    // ------------------------
 
     Column(modifier) {
         // header
@@ -104,30 +110,27 @@ fun FileNavigator(
             if (canImport) IconButtonCa(CaIcons.download, "Import files", onClick = onImport, boxSize = 30, iconSize = 18)
             IconButtonCa(CaIcons.plus, "New class", onClick = onNewFileRoot, boxSize = 30, iconSize = 18)
             
-            // --- ДОБАВЛЕНО: Кнопка вызова настроек ИИ ---
+            // Кнопка для открытия настроек ИИ
             IconButtonCa(CaIcons.gear, "AI Settings", onClick = { showAiSettings = true }, boxSize = 30, iconSize = 18)
-            // --------------------------------------------
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(Ca.colors.separator))
         Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(vertical = 6.dp)) {
             root.children.forEach { TreeRow(it, 0, expanded, activePath, onOpen, onNewFile, onViewDependencies, onConfigureModule, canShare, onShare, ctx) }
         }
 
-        // --- ДОБАВЛЕНО: Сам диалог ИИ ---
+        // Отображение диалога настроек ИИ
         if (showAiSettings) {
             AiAgentDialog(
                 onDismiss = { showAiSettings = false },
                 onSaveSettings = { provider, apiKey, url ->
-                    currentProvider = provider
-                    currentApiKey = apiKey
-                    currentApiUrl = url
+                    AiSettings.provider = provider
+                    AiSettings.apiKey = apiKey
+                    AiSettings.apiUrl = url
                     showAiSettings = false
-                    // Вывод в консоль для проверки работы
-                    println("Сохранено: Провайдер=$provider, URL=$url, Ключ=$apiKey")
+                    println("Настройки ИИ обновлены: Провайдер=$provider, URL=$url")
                 }
             )
         }
-        // --------------------------------
     }
 }
 
@@ -181,59 +184,59 @@ private fun TreeRow(
     val hovered by interaction.collectIsHoveredAsState()
 
     Box {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .height(30.dp)
-            .background(if (isActive) Ca.colors.accentSoft else Color.Transparent)
-            .hoverable(interaction)
-            .combinedClickable(
-                onClick = {
-                    if (node.filePath != null) onOpen(node)
-                    else expanded[node.id] = !isOpen
-                },
-                onLongClick = ({ menuOpen = true }),
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .height(30.dp)
+                .background(if (isActive) Ca.colors.accentSoft else Color.Transparent)
+                .hoverable(interaction)
+                .combinedClickable(
+                    onClick = {
+                        if (node.filePath != null) onOpen(node)
+                        else expanded[node.id] = !isOpen
+                    },
+                    onLongClick = ({ menuOpen = true }),
+                )
+                .padding(start = (8 + depth * 16).dp, end = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (isExpandable) {
+                Icon(
+                    if (isOpen) CaIcons.caretDown else CaIcons.caretRight,
+                    null,
+                    Modifier.size(14.dp),
+                    tint = Ca.colors.textTertiary,
+                )
+                Spacer(Modifier.width(4.dp))
+            } else {
+                Spacer(Modifier.width(18.dp))
+            }
+            NodeIcon(node, isOpen)
+            Spacer(Modifier.width(8.dp))
+            Text(
+                node.name,
+                color = if (isActive) Ca.colors.accent else Ca.colors.textPrimary,
+                style = Ca.type.footnote,
+                fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
             )
-            .padding(start = (8 + depth * 16).dp, end = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (isExpandable) {
-            Icon(
-                if (isOpen) CaIcons.caretDown else CaIcons.caretRight,
-                null,
-                Modifier.size(14.dp),
-                tint = Ca.colors.textTertiary,
-            )
-            Spacer(Modifier.width(4.dp))
-        } else {
-            Spacer(Modifier.width(18.dp))
+            when {
+                node.kind == NodeKind.Module && hovered ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
+                        IconButtonCa(CaIcons.gear, "Settings of ${node.name}", onClick = { onConfigureModule(node) }, boxSize = 22, iconSize = 14)
+                        IconButtonCa(CaIcons.layers, "Dependencies of ${node.name}", onClick = { onViewDependencies(node) }, boxSize = 22, iconSize = 14)
+                    }
+                canNewFile && hovered ->
+                    IconButtonCa(CaIcons.plus, if (node.resDirPath != null) "New resource here" else "New class here", onClick = { onNewFile(node) }, boxSize = 22, iconSize = 14)
+                // Share is shown for the active file (touch path) or any file on hover (desktop).
+                node.filePath != null && canShare && (hovered || isActive) ->
+                    IconButtonCa(CaIcons.share, "Share ${node.name}", onClick = { onShare(node) }, boxSize = 22, iconSize = 14)
+                node.gitStatus != null ->
+                    Box(Modifier.size(6.dp).background(gitColor(node.gitStatus), RoundedCornerShape(Ca.radius.pill)))
+            }
         }
-        NodeIcon(node, isOpen)
-        Spacer(Modifier.width(8.dp))
-        Text(
-            node.name,
-            color = if (isActive) Ca.colors.accent else Ca.colors.textPrimary,
-            style = Ca.type.footnote,
-            fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
-        when {
-            node.kind == NodeKind.Module && hovered ->
-                Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
-                    IconButtonCa(CaIcons.gear, "Settings of ${node.name}", onClick = { onConfigureModule(node) }, boxSize = 22, iconSize = 14)
-                    IconButtonCa(CaIcons.layers, "Dependencies of ${node.name}", onClick = { onViewDependencies(node) }, boxSize = 22, iconSize = 14)
-                }
-            canNewFile && hovered ->
-                IconButtonCa(CaIcons.plus, if (node.resDirPath != null) "New resource here" else "New class here", onClick = { onNewFile(node) }, boxSize = 22, iconSize = 14)
-            // Share is shown for the active file (touch path) or any file on hover (desktop).
-            node.filePath != null && canShare && (hovered || isActive) ->
-                IconButtonCa(CaIcons.share, "Share ${node.name}", onClick = { onShare(node) }, boxSize = 22, iconSize = 14)
-            node.gitStatus != null ->
-                Box(Modifier.size(6.dp).background(gitColor(node.gitStatus), RoundedCornerShape(Ca.radius.pill)))
-        }
-    }
         if (true) DropdownMenu(
             expanded = menuOpen,
             onDismissRequest = { menuOpen = false },
