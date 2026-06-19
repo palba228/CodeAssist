@@ -97,6 +97,7 @@ fun FileNavigator(
         Box(Modifier.fillMaxWidth().height(1.dp).background(Ca.colors.separator))
         Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(vertical = 6.dp)) {
             root.children.forEach { TreeRow(it, 0, expanded, activePath, onOpen, onNewFile, onViewDependencies, onConfigureModule, canShare, onShare, ctx) }
+            IconButton(Ca.icons.sparkles, "AI Agent", onClick = onAiAgentClick, boxSize = 30, iconSize = 18)
         }
     }
 }
