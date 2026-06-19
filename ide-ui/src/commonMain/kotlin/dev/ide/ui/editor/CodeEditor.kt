@@ -1,4 +1,4 @@
- package dev.ide.ui.editor
+package dev.ide.ui.editor
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
@@ -414,7 +414,7 @@ fun CodeEditor(
         aiBusy = true
         aiResult = null
         scope.launch {
-            val client = dev.ide.core.network.AiNetworkClient()
+            val client = dev.ide.ui.network.AiNetworkClient()
             val res = client.sendCodeToAi(
                 apiUrl = dev.ide.ui.components.AiSettings.apiUrl,
                 apiKey = dev.ide.ui.components.AiSettings.apiKey,
