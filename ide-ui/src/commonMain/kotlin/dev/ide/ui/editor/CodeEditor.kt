@@ -1,4 +1,4 @@
-package dev.ide.ui.editor
+ package dev.ide.ui.editor
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
@@ -404,6 +404,30 @@ fun CodeEditor(
         }
     }
 
+    // ---- ИНТЕГРАЦИЯ ИИ: Состояния и Функция ----
+    var aiBusy by remember(path) { mutableStateOf(false) }
+    var aiResult by remember(path) { mutableStateOf<String?>(null) }
+
+    fun askAi() {
+        if (aiBusy) return
+        val textToAnalyze = editorSession.selectedText()?.takeIf { it.isNotEmpty() } ?: editorSession.doc.text
+        aiBusy = true
+        aiResult = null
+        scope.launch {
+            val client = dev.ide.core.network.AiNetworkClient()
+            val res = client.sendCodeToAi(
+                apiUrl = dev.ide.ui.components.AiSettings.apiUrl,
+                apiKey = dev.ide.ui.components.AiSettings.apiKey,
+                provider = dev.ide.ui.components.AiSettings.provider,
+                prompt = "Проанализируй этот код, найди возможные ошибки и предложи улучшения:",
+                fileContent = textToAnalyze
+            )
+            aiResult = res
+            aiBusy = false
+        }
+    }
+    // ---------------------------------------------
+
     // Read the document + selection straight off the session (snapshot reads → this body recomposes on
     // edit), but derive everything from the rope's O(log N) random access / small substrings — the body
     // never forces the O(n) full-text materialization (only debounced consumers pull the full String).
@@ -765,6 +789,11 @@ fun CodeEditor(
                     if ((ev.isCtrlPressed || ev.isMetaPressed) && ev.key == Key.S) {
                         onSave(); return@onPreviewKeyEvent true
                     }
+                    // Ask AI Shortcut (Ctrl/Cmd + J)
+                    if ((ev.isCtrlPressed || ev.isMetaPressed) && ev.key == Key.J) {
+                        askAi()
+                        return@onPreviewKeyEvent true
+                    }
                     // Find (⌘/Ctrl-F) / find+replace (⌘/Ctrl-R); seed the query from the current selection.
                     if ((ev.isCtrlPressed || ev.isMetaPressed) && (ev.key == Key.F || ev.key == Key.R)) {
                         editorSession.selectedText()?.takeIf { it.isNotEmpty() && '\n' !in it }?.let { findQuery = it }
@@ -1057,6 +1086,10 @@ fun CodeEditor(
                         handlesVisible = false
                     },
                     onSelectAll = { editorSession.selectAll() },
+                    onAskAi = { 
+                        askAi()
+                        handlesVisible = false
+                    }
                 )
             }
         }
@@ -1199,6 +1232,16 @@ fun CodeEditor(
                 modifier = Modifier.align(Alignment.TopCenter),
             )
         }
+
+        // ---- Окно с ответом ИИ поверх кода ----
+        if (aiBusy || aiResult != null) {
+            AiResponsePopup(
+                busy = aiBusy,
+                result = aiResult,
+                onDismiss = { aiBusy = false; aiResult = null },
+                modifier = Modifier.align(Alignment.Center)
+            )
+        }
     }
 }
 
@@ -1257,6 +1300,48 @@ private fun RenamePopup(
         Spacer(Modifier.size(6.dp))
         Text(if (busy) "Renaming…" else "Enter to rename '${state.oldName}', Esc to cancel",
             color = Ca.colors.textTertiary, style = Ca.type.caption2)
+    }
+}
+
+// ---- Окно с ответом ИИ ----
+@Composable
+private fun AiResponsePopup(
+    busy: Boolean,
+    result: String?,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier.padding(top = 48.dp, bottom = 48.dp).width(360.dp)
+            .background(Ca.colors.glassThick, RoundedCornerShape(Ca.radius.lg))
+            .border(1.dp, Ca.colors.glassEdge, RoundedCornerShape(Ca.radius.lg))
+            .padding(16.dp),
+    ) {
+        Text("AI Assistant", color = Ca.colors.textSecondary, style = Ca.type.caption, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.size(8.dp))
+        Box(
+            Modifier.fillMaxWidth().weight(1f, fill = false)
+                .background(Ca.colors.surface2, RoundedCornerShape(Ca.radius.control))
+                .border(1.dp, Ca.colors.hairline, RoundedCornerShape(Ca.radius.control))
+                .padding(12.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            if (busy) {
+                Text("Анализирую код...", color = Ca.colors.textTertiary, style = Ca.type.body)
+            } else if (result != null) {
+                Text(result, color = Ca.colors.textPrimary, style = Ca.type.body)
+            }
+        }
+        Spacer(Modifier.size(12.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            Text(
+                "Закрыть",
+                color = Ca.colors.accent,
+                style = Ca.type.body,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.clickable { onDismiss() }.padding(8.dp)
+            )
+        }
     }
 }
 
@@ -1572,7 +1657,7 @@ private fun DrawScope.wavyUnderline(color: Color, x1: Float, x2: Float, y: Float
 // ---- chrome ----
 
 /** The inline diagnostic chip: a pill at the right of a diagnostic line — severity-tinted fill, icon,
- *  message. Colour/icon follow [severity]; an [unused] warning is muted rather than alarming. */
+ * message. Colour/icon follow [severity]; an [unused] warning is muted rather than alarming. */
 @Composable
 private fun DiagnosticChip(severity: UiSeverity, unused: Boolean, message: String, onClick: () -> Unit, modifier: Modifier) {
     val color = when (severity) {
@@ -1613,6 +1698,7 @@ private fun SelectionToolbar(
     onCut: () -> Unit,
     onPaste: () -> Unit,
     onSelectAll: () -> Unit,
+    onAskAi: () -> Unit // ДОБАВЛЕНО
 ) {
     Row(
         Modifier
@@ -1626,6 +1712,7 @@ private fun SelectionToolbar(
         }
         ToolbarAction("Paste", onPaste)
         ToolbarAction("Select all", onSelectAll)
+        ToolbarAction("Ask AI", onAskAi) // ДОБАВЛЕНО
     }
 }
 
